@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JIT Supply Chain GA Optimizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .status-bar {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-left: 4px solid #28a745;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%{
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 30px;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            color: #6c757d;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            color: #495057;
+            border-bottom-color: #007bff;
+            background: rgba(0, 123, 255, 0.05);
+        }
+
+        .tab:hover {
+            background: rgba(0, 123, 255, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e9ecef;
+        }
+
+        .card h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .file-upload {
+            border: 2px dashed #007bff;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background: rgba(0, 123, 255, 0.05);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .file-upload:hover {
+            background: rgba(0, 123, 255, 0.1);
+            border-color: #0056b3;
+        }
+
+        .file-upload.dragover {
+            background: rgba(0, 123, 255, 0.15);
+            border-color: #0056b3;
+        }
+
+        .results-section {
+            margin-top: 30px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-color: #28a745;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-color: #dc3545;
+        }
+
+        .alert-info {
+            background: #cce7ff;
+            color: #004085;
+            border-color: #007bff;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0%{
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .recommendations-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .recommendations-table th,
+        .recommendations-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .recommendations-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .recommendations-table tr:hover {
+            background: rgba(0, 123, 255, 0.05);
+        }
+
+        .confidence-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .confidence-high {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .confidence-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .confidence-low {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .modal-close:hover {
+            color: #000;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tabs {
+                flex-direction: column;
+                border-bottom: none;
+            }
+
+            .tab {
+                border-radius: 8px;
+                margin-bottom: 10px;
+                border: 1px solid #e9ecef;
+            }
+
+            .tab.active {
+                border-bottom-color: transparent;
+                background: #007bff;
+                color: white;
+            }
+
+            .file-upload {
+                padding: 20px;
+            }
+
+            .recommendations-table th,
+            .recommendations-table td {
+                padding: 8px;
+                font-size: 0.9rem;
+            }
+        }
+
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>JIT Supply Chain GA Optimizer</h1>
+            <p>Optimize your supply chain with Genetic Algorithm-powered recommendations</p>
+        </div>
+
+        <div class="main-content">
+            <div class="status-bar">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span id="status-text">Checking system status...</span>
+                </div>
+                <button class="btn btn-primary" id="load-model-btn">Load Model</button>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" data-tab="upload">Upload Data</button>
+                <button class="tab" data-tab="optimize">Optimize</button>
+                <button class="tab" data-tab="results">Results</button>
+                <button class="tab" data-tab="predict">Single Prediction</button>
+            </div>
+
+            <div class="tab-content active" id="upload">
+                <div class="card">
+                    <h3>Upload Supply Chain Data</h3>
+                    <div class="alert hidden" id="upload-alert"></div>
+                    <div class="file-upload" id="file-upload">
+                        <p>Drag and drop CSV/Excel files here or click to upload</p>
+                        <input type="file" id="file-input" accept=".csv,.xlsx,.xls" multiple>
+                    </div>
+                    <div class="form-group">
+                        <label>Uploaded Files</label>
+                        <ul id="uploaded-files"></ul>
+                    </div>
+                    <button class="btn btn-success" id="upload-btn" disabled>Upload Files</button>
+                </div>
+            </div>
+
+            <div class="tab-content" id="optimize">
+                <div class="card">
+                    <h3>Run Optimization</h3>
+                    <div class="alert hidden" id="optimize-alert"></div>
+                    <div class="form-group">
+                        <label>Select Uploaded File</label>
+                        <select class="form-control" id="optimize-file-select">
+                            <option value="">Select a file</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" id="optimize-btn" disabled>Run Optimization</button>
+                    <div class="loading" id="optimize-loading">
+                        <div class="spinner"></div>
+                        <p>Running optimization...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="results">
+                <div class="card">
+                    <h3>Optimization Results</h3>
+                    <div class="alert hidden" id="results-alert"></div>
+                    <div class="form-group">
+                        <label>Select Results File</label>
+                        <select class="form-control" id="results-file-select">
+                            <option value="">Select a results file</option>
+                        </select>
+                    </div>
+                    <div class="results-section" id="results-content">
+                        <div class="metrics-grid" id="metrics-grid"></div>
+                        <div class="chart-container" id="production-chart"></div>
+                        <div class="chart-container" id="inventory-chart"></div>
+                        <div class="chart-container" id="fulfillment-chart"></div>
+                        <table class="recommendations-table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Production</th>
+                                    <th>Inventory</th>
+                                    <th>Fulfillment Days</th>
+                                    <th>Safety Stock</th>
+                                    <th>Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recommendations-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="predict">
+                <div class="card">
+                    <h3>Single Product Prediction</h3>
+                    <div class="alert hidden" id="predict-alert"></div>
+                    <div class="form-group">
+                        <label>Product Name</label>
+                        <input type="text" class="form-control" id="predict-product-name"
+                            placeholder="Enter product name">
+                    </div>
+                    <div class="form-group">
+                        <label>Order Quantity</label>
+                        <input type="number" class="form-control" id="predict-order-quantity"
+                            placeholder="Enter order quantity" value="100">
+                    </div>
+                    <button class="btn btn-primary" id="predict-btn">Get Prediction</button>
+                    <div class="loading" id="predict-loading">
+                        <div class="spinner"></div>
+                        <p>Generating prediction...</p>
+                    </div>
+                    <div class="results-section hidden" id="predict-results">
+                        <h4>Prediction Results</h4>
+                        <table class="recommendations-table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Production</th>
+                                    <th>Inventory</th>
+                                    <th>Fulfillment Days</th>
+                                    <th>Safety Stock</th>
+                                    <th>Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody id="predict-recommendation"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="model-load-modal">
+        <div class="modal-content">
+            <button class="modal-close" id="modal-close">×</button>
+            <h3>Load Model</h3>
+            <div class="alert hidden" id="model-load-alert"></div>
+            <div class="form-group">
+                <label>Model Path</label>
+                <input type="text" class="form-control" id="model-path"
+                    placeholder="Enter model file path (e.g., models/jit_ga_model.pkl)">
+            </div>
+            <button class="btn btn-primary" id="submit-model-path">Load Model</button>
+        </div>
+    </div>
+
+    <script>
+        // Utility function to show alerts
+        function showAlert(type, message, section) {
+            const alert = document.getElementById(`${section}-alert`);
+            alert.className = `alert ${type}`;
+            alert.textContent = message;
+            alert.classList.remove('hidden');
+            setTimeout(() => alert.classList.add('hidden'), 5000);
+        }
+
+        // Check system status
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                const statusText = document.getElementById('status-text');
+                statusText.textContent = data.model_loaded ? 'Model Loaded' : 'No Model Loaded';
+                document.querySelector('.status-dot').style.background = data.model_loaded ? '#28a745' : '#dc3545';
+            } catch (error) {
+                console.error('Error checking status:', error);
+                showAlert('alert-error', 'Failed to check system status', 'upload');
+            }
+        }
+
+        // Tab switching
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // File upload handling
+        const fileUpload = document.getElementById('file-upload');
+        const fileInput = document.getElementById('file-input');
+        const uploadBtn = document.getElementById('upload-btn');
+        const uploadedFilesList = document.getElementById('uploaded-files');
+        let uploadedFiles = [];
+
+        fileUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUpload.classList.add('dragover');
+        });
+
+        fileUpload.addEventListener('dragleave', () => {
+            fileUpload.classList.remove('dragover');
+        });
+
+        fileUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUpload.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', () => {
+            handleFiles(fileInput.files);
+        });
+
+        function handleFiles(files) {
+            for (let file of files) {
+                if (file.name.match(/\.(csv|xlsx|xls)$/)) {
+                    uploadedFiles.push(file);
+                    const li = document.createElement('li');
+                    li.textContent = file.name;
+                    uploadedFilesList.appendChild(li);
+                }
+            }
+            uploadBtn.disabled = uploadedFiles.length === 0;
+            updateOptimizeFileSelect();
+        }
+
+        uploadBtn.addEventListener('click', async () => {
+            const formData = new FormData();
+            uploadedFiles.forEach(file => formData.append('file', file));
+
+            try {
+                uploadBtn.disabled = true;
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                showAlert(result.success ? 'alert-success' : 'alert-error',
+                    result.message || result.error, 'upload');
+                if (result.success) {
+                    uploadedFiles = [];
+                    uploadedFilesList.innerHTML = '';
+                    updateOptimizeFileSelect();
+                }
+            } catch (error) {
+                console.error('Error uploading files:', error);
+                showAlert('alert-error', 'Error uploading files', 'upload');
+            } finally {
+                uploadBtn.disabled = false;
+            }
+        });
+
+        // Update optimize file select
+        async function updateOptimizeFileSelect() {
+            try {
+                const response = await fetch('/api/results/list');
+                const data = await response.json();
+                const select = document.getElementById('optimize-file-select');
+                select.innerHTML = '<option value="">Select a file</option>';
+                if (data.success) {
+                    data.files.forEach(file => {
+                        if (file.filename.match(/\.(csv|xlsx|xls)$/)) {
+                            const option = document.createElement('option');
+                            option.value = file.filename;
+                            option.textContent = file.filename;
+                            select.appendChild(option);
+                        }
+                    });
+                }
+                optimizeBtn.disabled = !select.value;
+            } catch (error) {
+                console.error('Error fetching uploaded files:', error);
+                showAlert('alert-error', 'Error fetching uploaded files', 'upload');
+            }
+        }
+
+        // Optimize button handling
+        const optimizeBtn = document.getElementById('optimize-btn');
+        const optimizeLoading = document.getElementById('optimize-loading');
+        const optimizeFileSelect = document.getElementById('optimize-file-select');
+
+        optimizeFileSelect.addEventListener('change', () => {
+            optimizeBtn.disabled = !optimizeFileSelect.value;
+        });
+
+        optimizeBtn.addEventListener('click', async () => {
+            optimizeLoading.style.display = 'block';
+            optimizeBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/optimize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_path: `${app.config['UPLOAD_FOLDER']}/${optimizeFileSelect.value}` })
+                });
+                const result = await response.json();
+                showAlert(result.success ? 'alert-success' : 'alert-error',
+                    result.message || result.error, 'optimize');
+                if (result.success) {
+                    displayResults(result.results);
+                    updateResultsFileSelect();
+                }
+            } catch (error) {
+                console.error('Error running optimization:', error);
+                showAlert('alert-error', 'Error running optimization', 'optimize');
+            } finally {
+                optimizeLoading.style.display = 'none';
+                optimizeBtn.disabled = !optimizeFileSelect.value;
+            }
+        });
+
+        // Update results file select
+        async function updateResultsFileSelect() {
+            try {
+                const response = await fetch('/api/results/list');
+                const data = await response.json();
+                const select = document.getElementById('results-file-select');
+                select.innerHTML = '<option value="">Select a results file</option>';
+                if (data.success) {
+                    data.files.forEach(file => {
+                        const option = document.createElement('option');
+                        option.value = file.filename;
+                        option.textContent = `${file.filename} (${new Date(file.created).toLocaleString()})`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching results files:', error);
+                showAlert('alert-error', 'Error fetching results files', 'results');
+            }
+        }
+
+        // Results file select handling
+        const resultsFileSelect = document.getElementById('results-file-select');
+        resultsFileSelect.addEventListener('change', async () => {
+            if (resultsFileSelect.value) {
+                try {
+                    const response = await fetch(`/api/results/${resultsFileSelect.value}`);
+                    const result = await response.json();
+                    if (result.success) {
+                        displayResults(result);
+                    } else {
+                        showAlert('alert-error', result.error || 'Error loading results', 'results');
+                    }
+                } catch (error) {
+                    console.error('Error loading results:', error);
+                    showAlert('alert-error', 'Error loading results', 'results');
+                }
+            }
+        });
+
+        // Display results
+        function displayResults(results) {
+            const metricsGrid = document.getElementById('metrics-grid');
+            const productionChart = document.getElementById('production-chart');
+            const inventoryChart = document.getElementById('inventory-chart');
+            const fulfillmentChart = document.getElementById('fulfillment-chart');
+            const recommendationsBody = document.getElementById('recommendations-body');
+
+            // Metrics
+            metricsGrid.innerHTML = `
+                        <div class="metric-card">
+                            <div class="metric-value">${results.summary.total_products}</div>
+                            <div class="metric-label">Total Products</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${results.summary.total_recommended_production}</div>
+                            <div class="metric-label">Total Production</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${results.summary.total_recommended_inventory}</div>
+                            <div class="metric-label">Total Inventory</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${results.summary.average_fulfillment_days}</div>
+                            <div class="metric-label">Avg. Fulfillment Days</div>
+                        </div>
+                        `;
+
+            // Charts
+            productionChart.innerHTML = results.charts.production_vs_demand
+                ? `<img src="data:image/png;base64,${results.charts.production_vs_demand}" alt="Production vs Demand">`
+                : '<p>No production chart available</p>';
+            inventoryChart.innerHTML = results.charts.inventory_distribution
+                ? `<img src="data:image/png;base64,${results.charts.inventory_distribution}" alt="Inventory Distribution">`
+                : '<p>No inventory chart available</p>';
+            fulfillmentChart.innerHTML = results.charts.fulfillment_times
+                ? `<img src="data:image/png;base64,${results.charts.fulfillment_times}" alt="Fulfillment Times">`
+                : '<p>No fulfillment chart available</p>';
+
+            // Recommendations
+            recommendationsBody.innerHTML = '';
+            for (const [product, rec] of Object.entries(results.recommendations)) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                                    <td>${product}</td>
+                                    <td>${rec.recommended_production}</td>
+                                    <td>${rec.recommended_inventory}</td>
+                                    <td>${rec.recommended_fulfillment_days}</td>
+                                    <td>${rec.safety_stock}</td>
+                                    <td><span class="confidence-badge confidence-${rec.confidence}">${rec.confidence}</span></td>
+                                    `;
+                recommendationsBody.appendChild(row);
+            }
+        }
+
+        // Single prediction handling
+        const predictBtn = document.getElementById('predict-btn');
+        const predictLoading = document.getElementById('predict-loading');
+        const predictResults = document.getElementById('predict-results');
+        const predictRecommendation = document.getElementById('predict-recommendation');
+
+        predictBtn.addEventListener('click', async () => {
+            const productName = document.getElementById('predict-product-name').value;
+            const orderQuantity = document.getElementById('predict-order-quantity').value;
+
+            if (!productName) {
+                showAlert('alert-error', 'Product name is required', 'predict');
+                return;
+            }
+
+            predictLoading.style.display = 'block';
+            predictBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ product_name: productName, order_quantity: parseInt(orderQuantity) })
+                });
+                const result = await response.json();
+                showAlert(result.success ? 'alert-success' : 'alert-error',
+                    result.message || result.error, 'predict');
+                if (result.success) {
+                    predictResults.classList.remove('hidden');
+                    predictRecommendation.innerHTML = `
+                                    <tr>
+                                        <td>${result.product_name}</td>
+                                        <td>${result.recommendation.recommended_production || 'N/A'}</td>
+                                        <td>${result.recommendation.recommended_inventory || 'N/A'}</td>
+                                        <td>${result.recommendation.recommended_fulfillment_days || 'N/A'}</td>
+                                        <td>${result.recommendation.safety_stock || 'N/A'}</td>
+                                        <td><span class="confidence-badge confidence-${result.recommendation.confidence || 'low'}">${result.recommendation.confidence || 'low'}</span></td>
+                                    </tr>
+                                    `;
+                }
+            } catch (error) {
+                console.error('Error making prediction:', error);
+                showAlert('alert-error', 'Error making prediction', 'predict');
+            } finally {
+                predictLoading.style.display = 'none';
+                predictBtn.disabled = false;
+            }
+        });
+
+        // Model loading modal
+        const loadModelBtn = document.getElementById('load-model-btn');
+        const modelLoadModal = document.getElementById('model-load-modal');
+        const modalClose = document.getElementById('modal-close');
+        const submitModelPath = document.getElementById('submit-model-path');
+
+        loadModelBtn.addEventListener('click', () => {
+            modelLoadModal.style.display = 'flex';
+        });
+
+        modalClose.addEventListener('click', () => {
+            modelLoadModal.style.display = 'none';
+        });
+
+        submitModelPath.addEventListener('click', async () => {
+            const modelPath = document.getElementById('model-path').value;
+            if (!modelPath) {
+                showAlert('alert-error', 'Model path is required', 'model-load');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/model/load', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_path: modelPath })
+                });
+                const result = await response.json();
+                showAlert(result.success ? 'alert-success' : 'alert-error',
+                    result.message || result.error, 'model-load');
+                if (result.success) {
+                    modelLoadModal.style.display = 'none';
+                    checkStatus();
+                }
+            } catch (error) {
+                console.error('Error loading model:', error);
+                showAlert('alert-error', 'Error loading model', 'model-load');
+            }
+        });
+
+        // Initialize
+        checkStatus();
+        updateOptimizeFileSelect();
+        updateResultsFileSelect();
+    </script>
+</body>
+
+</html>
